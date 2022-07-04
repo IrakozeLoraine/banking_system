@@ -26,7 +26,7 @@ class Account{
         }
 
         string toString(){
-            return to_string(acc_no) + "," + dob + "," + issue_date + "," + to_string(balance);
+            return to_string(acc_no) + "," + names + "," + dob + "," + issue_date + "," + to_string(balance);
         }
 
         Account(){
@@ -76,9 +76,13 @@ void create_account(vector<Account> accounts){
         cout<<"Account number for "<<acc->names<<" is: "<<acc->acc_no<<" issued on "<<acc->issue_date<<endl;
 
         accounts.push_back(*acc);
-        save_account_to_file(accounts);
+        
+        fstream logs;
+        logs.open("logs.txt", ios::app);
+        logs<<acc->toString()<<endl;   
+        logs.close();
     }
-
+    save_account_to_file(accounts);
 }
 
 string find_account(long account_number){
@@ -123,42 +127,72 @@ vector<Account> load_account_from_file(){
 	vector<Account> accounts;
     fstream file;
     file.open("accounts.csv", ios::in);
-    string line;
-    while(getline(file, line)){
-        if(line.find("Account Number") != string::npos){
-            continue;
-        }
+    string line = "";
 
-        stringstream ss(line);
-        string token;
-        vector<string> tokens;
-        while(getline(ss, token, ',')){
-            tokens.push_back(token);
+        while(getline(file, line)){
+            if(line.find("Account Number") != string::npos){
+                continue;
+            }
+
+            stringstream ss(line);
+            string token;
+            vector<string> tokens;
+            while(getline(ss, token, ',')){
+                if(token == ""){
+                    goto close_shit;
+                }
+                tokens.push_back(token);
+            }
+            Account account;
+            account.acc_no = stol(tokens[0]);
+            account.dob = tokens[1];
+            account.issue_date = tokens[2];
+            account.balance = stof(tokens[3]);
+            accounts.push_back(account);
+    
+            
         }
-        Account account;
-        account.acc_no = stol(tokens[0]);
-        account.dob = tokens[1];
-        account.issue_date = tokens[2];
-        account.balance = stof(tokens[3]);
-        accounts.push_back(account);
-    }
-    file.close();
+        close_shit:
+            file.close();
     return accounts;
 }
 
 void account_list() {
     vector<Account> accounts = load_account_from_file();
-    cout<<"Account Number,Date of Birth,Issue Date,Balance"<<endl;
-    for(auto account : accounts){
-        cout<<account.toString()<<endl;
+
+    if (accounts.empty()){
+        cout<<"No accounts found"<<endl;
+    } else {
+        cout<<"Account Number,Date of Birth,Issue Date,Balance"<<endl;
+        for(auto account : accounts){
+            cout<<account.toString()<<endl;
+        }
     }
 }
 
 void account_logs(){
-    vector<Account> accounts = load_account_from_file();
-    cout<<"Account Number,Date of Birth,Issue Date,Balance"<<endl;
-    for(auto account : accounts){
-        cout<<account.toString()<<endl;
+    long account_number;
+    cout<<"Enter the account number: ";
+    cin>>account_number;
+
+    bool hasRecord = false;
+    string account = find_account(account_number);
+    if(account == ""){
+        cout<<"Account not found"<<endl;
+    } else {
+        fstream file;
+        file.open("logs.txt", ios::in);
+
+        while (getline(file, account)) {
+            if(account.find(to_string(account_number)) != string::npos){
+                hasRecord = true;
+                cout<<account<<endl;
+            }
+        }
+        file.close();
+        if(!hasRecord){
+            cout<<"No records found"<<endl;
+        }
     }
 }
 
@@ -172,23 +206,33 @@ void update_balance(string action){
         cout<<"Account not found"<<endl;
     } else {
         vector<Account> accounts = load_account_from_file();
-        for(auto account : accounts){
-            if(account.acc_no == account_number){
-                if(action == "deposit"){
-                    float amount;
-                    cout<<"Enter the amount to deposit: ";
-                    cin>>amount;
-                    account.balance += amount;
-                } else if(action == "withdraw"){
-                    float amount;
-                    cout<<"Enter the amount to withdraw: ";
-                    cin>>amount;
-                    account.balance -= amount;
+        if (accounts.empty()){
+            cout<<"No accounts found"<<endl;
+        } else {
+            for(auto account : accounts){
+                if(account.acc_no == account_number){
+                    if(action == "deposit"){
+                        float amount;
+                        cout<<"Enter the amount to deposit: ";
+                        cin>>amount;
+                        account.balance += amount;
+                    } else if(action == "withdraw"){
+                        float amount;
+                        cout<<"Enter the amount to withdraw: ";
+                        cin>>amount;
+                        account.balance -= amount;
+                    }
                 }
+                fstream logs;
+                logs.open("logs.txt", ios::app);
+                //save account to logs
+                logs<<account.toString()<<endl;
+                logs.close();
+                
             }
+            remove("accounts.csv");
+            save_account_to_file(accounts);
         }
-        remove("accounts.csv");
-        save_account_to_file(accounts);
     }
 }
 
@@ -202,22 +246,31 @@ void modify_account(){
         cout<<"Account not found"<<endl;
     } else {
         vector<Account> accounts = load_account_from_file();
-        for(auto account : accounts){
-            if(account.acc_no == account_number){
-                cout<<"Enter the new account holder names: ";
-                cin.ignore();
-                getline(cin, account.names);
+        if (accounts.empty()){
+            cout<<"No accounts found"<<endl;
+        } else {
+            for(auto account : accounts){
+                if(account.acc_no == account_number){
+                    cout<<"Enter the new account holder names: ";
+                    cin.ignore();
+                    getline(cin, account.names);
 
-                cout<<"Enter the new date of birth: ";
-                cin>>account.dob;
+                    cout<<"Enter the new date of birth: ";
+                    cin>>account.dob;
+
+                    fstream logs;
+                    logs.open("logs.txt", ios::app);
+                    logs<<account.toString()<<endl; 
+                    logs.close(); 
+                }
             }
+            remove("accounts.csv");
+            save_account_to_file(accounts);
         }
-        remove("accounts.csv");
-        save_account_to_file(accounts);
     }
 }
 
-void close_account(){
+void delete_account(){
     long account_number;
     cout<<"Enter the account number: ";
     cin>>account_number;
@@ -227,17 +280,24 @@ void close_account(){
         cout<<"Account not found"<<endl;
     } else {
         vector<Account> accounts = load_account_from_file();
-        for (auto i = 0; i < accounts.size(); i++)
-        {
-            if (accounts[i].acc_no == account_number)
+        if (accounts.empty()){
+            cout<<"No accounts found"<<endl;
+        } else {
+            for (auto i = 0; i < accounts.size(); i++)
             {
-                accounts.erase(accounts.begin() + i);
+                if (accounts[i].acc_no == account_number)
+                {
+                    accounts.erase(accounts.begin() + i);
+                    fstream logs;
+                    logs.open("logs.txt", ios::app);
+                    logs<<account<<endl;  
+                    logs.close();
+                }
             }
+            
+            remove("accounts.csv");
+            save_account_to_file(accounts);
         }
-        
-
-        remove("accounts.csv");
-        save_account_to_file(accounts);
     }
 }
 
@@ -280,7 +340,7 @@ int main() {
             modify_account();
             break;
         case 6:
-            close_account();
+            delete_account();
             break;
         case 7:
             account_list();
@@ -289,6 +349,7 @@ int main() {
             account_logs();
             break;
         case 9:
+            cout<<"Thank you for using the bank management system"<<endl;
             exit(0);
             break;
         default:
