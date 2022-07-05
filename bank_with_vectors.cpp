@@ -2,6 +2,7 @@
 #include<iomanip>
 #include<fstream>
 #include<vector>
+#include<algorithm>
 
 using namespace std;
 
@@ -170,6 +171,25 @@ void account_list() {
     }
 }
 
+void account_list_alphabetically(){
+    vector<Account> accounts = load_account_from_file();
+
+    if (accounts.empty()){
+        cout<<"No accounts found"<<endl;
+    } else {
+        //sort vector alphabetically from name
+        sort(accounts.begin(), accounts.end(), [](Account a, Account b){
+            return a.names < b.names;
+        });
+
+        cout<<"Account Number,Date of Birth,Issue Date,Balance"<<endl;
+        for(auto account : accounts){
+            cout<<account.toString()<<endl;
+        }
+
+    }
+}
+
 void account_logs(){
     long account_number;
     cout<<"Enter the account number: ";
@@ -314,8 +334,9 @@ int main() {
         cout<<"\t|\t\t5. Modify account\t\t|" << endl;
         cout<<"\t|\t\t6. close account\t\t|" << endl;
         cout<<"\t|\t\t7. Account list\t\t\t|" << endl;
-        cout<<"\t|\t\t8. Account logs\t\t\t|" << endl;
-        cout<<"\t|\t\t9. Exit\t\t\t\t|" << endl;
+        cout<<"\t|\t\t8. Account list alphabetically\t|" << endl;
+        cout<<"\t|\t\t9. Account logs\t\t\t|" << endl;
+        cout<<"\t|\t\t10. Exit\t\t\t|" << endl;
 
         cout<<"\tEnter your option: ";
         cin>>option;
@@ -346,16 +367,19 @@ int main() {
             account_list();
             break;
         case 8:
-            account_logs();
+            account_list_alphabetically();
             break;
         case 9:
+            account_logs();
+            break;
+        case 10:
             cout<<"Thank you for using the bank management system"<<endl;
             exit(0);
             break;
         default:
             break;
         }
-    }while(option!=8);
+    }while(option!=10);
 
     return 0;
 }
